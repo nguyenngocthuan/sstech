@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/PartnerTransaction.API/Dockerfile
+    container_name: partner-transaction-api
+    ports:
+      - "7112:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__Port: 5672
+      RabbitMQ__UserName: guest
+      RabbitMQ__Password: guest
+      PartnerVerificationApi: http://localhost:8080/api/v1/mock/partner/transactions
+      Jwt__Issuer: PartnerTransaction.Api
+      Jwt__Audience: PartnerTransaction.Client
+      Jwt__SecretKey: vKWANc7OHKb9BMac8Qeozls350/ovch9KzH9uXIoNfw=
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: partner-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
