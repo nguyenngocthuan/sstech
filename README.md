@@ -106,13 +106,72 @@ which generates a development JWT.
 
 In a production environment, tokens would be issued by a dedicated identity provider and secrets would be stored in a secure secret-management system.
 
-## Prerequisites
+## Run locally
+
+### Prerequisites
 
 * .NET 8 SDK
 * Docker Desktop
-* Docker Compose
 
-## Run locally
+### 1. Configure Partner Verification API
+
+The mock Partner Verification API is implemented in the same API project.
+
+In `appsettings.json`, configure the `PartnerVerificationApi` URL to match the port used by the local API:
+
+```json
+{
+  "PartnerVerificationApi": "https://localhost:7112/api/v1/mock/partner/transactions"
+}
+```
+
+If the API runs on a different port, update the URL accordingly.
+
+For example, if the API runs on port `5001`:
+
+```json
+{
+  "PartnerVerificationApi": "https://localhost:5001/api/v1/mock/partner/transactions"
+}
+```
+
+> Make sure the protocol (`http` or `https`) and port match the URL used by the local API.
+
+### 2. Start RabbitMQ with Docker
+
+The application uses RabbitMQ as the local message broker.
+
+Start RabbitMQ:
+
+```bash
+docker run -d \
+  --name partner-rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  rabbitmq:4-management
+```
+
+RabbitMQ services:
+
+| Service       | Address                |
+| ------------- | ---------------------- |
+| AMQP          | localhost:5672         |
+| Management UI | http://localhost:15672 |
+
+Default development credentials:
+
+```text
+Username: guest
+Password: guest
+```
+
+You can open the RabbitMQ Management UI at:
+
+```text
+http://localhost:15672
+```
+
+### 3. Run the API locally
 
 Restore dependencies:
 
@@ -132,51 +191,11 @@ Swagger:
 https://localhost:7112/swagger
 ```
 
-> The actual local URL may differ depending on the launch profile.
+> If your local API uses a different port, use that port for Swagger and update `PartnerVerificationApi` accordingly.
 
-## Run with Docker Compose
+### 4. Test the API
 
-The project includes Docker support for both the API and RabbitMQ.
-
-Run:
-
-```bash
-docker compose up --build
-```
-
-Or run in the background:
-
-```bash
-docker compose up --build -d
-```
-
-Services:
-
-| Service                | URL / Port                    |
-| ---------------------- | ----------------------------- |
-| API                    | http://localhost:7112         |
-| Swagger                | http://localhost:7112/swagger |
-| RabbitMQ AMQP          | localhost:5672                |
-| RabbitMQ Management UI | http://localhost:15672        |
-
-RabbitMQ default development credentials:
-
-```text
-Username: guest
-Password: guest
-```
-
-Stop the services:
-
-```bash
-docker compose down
-```
-
-## Test the API
-
-### 1. Generate a JWT
-
-Call:
+Generate a JWT:
 
 ```http
 POST /api/v1/auth/token
@@ -184,19 +203,9 @@ POST /api/v1/auth/token
 
 Copy the returned `accessToken`.
 
-### 2. Authorize in Swagger
-
 Click **Authorize** in Swagger and enter the JWT token.
 
-Swagger will send:
-
-```http
-Authorization: Bearer <token>
-```
-
-### 3. Create a transaction
-
-Call:
+Then call:
 
 ```http
 POST /api/v1/partner/transactions
@@ -221,6 +230,46 @@ A successful request returns:
 ```
 
 The transaction is then published asynchronously to RabbitMQ.
+
+### 5. Stop RabbitMQ
+
+When you finish testing:
+
+```bash
+docker stop partner-rabbitmq
+```
+
+To remove the container:
+
+```bash
+docker rm partner-rabbitmq
+```
+
+To start the existing container again:
+
+```bash
+docker start partner-rabbitmq
+```
+
+### 6. Run API and RabbitMQ with Docker Compose
+
+Alternatively, both the API and RabbitMQ can be started together using Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Or run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+Stop the services:
+
+```bash
+docker compose down
+```
 
 ## Run tests
 
